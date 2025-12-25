@@ -705,4 +705,59 @@ useAuthStore.persist.onFinishHydration(() => {
 
 ---
 
+## 🔐 Deep Dive: `AuthStore` Implementation (`Auth.ts`)
+
+This is the most critical store in your application. It handles user identity, sessions, and security using **Appwrite + Zustand**.
+
+### 1. The Store Schema (`IAuthStore`)
+
+We define exactly what our store "remembers":
+- **`session`**: The current Appwrite session object.
+- **`jwt`**: A JSON Web Token for secure server-side verification.
+- **`user`**: The user profile data (including custom `UserPrefs` like `reputation`).
+- **`hydrated`**: A flag to tell the UI when the saved data is loaded.
+
+### 2. Key Appwrite Methods Used
+
+In the **Client-Side (Web SDK)**, we use these methods:
+
+- **`account.createEmailPasswordSession(email, password)`**: The modern way to log in. In older versions, it was `createEmailSession`.
+- **`account.getSession("current")`**: Checks if the user is already logged in on this browser.
+- **`account.get<UserPrefs>()`**: Fetches the user's full profile. We pass `<UserPrefs>` to tell TypeScript that `user.prefs` will contain a `reputation` number.
+- **`account.createJWT()`**: Generates a temporary token that you can send to your own API routes to prove who the user is.
+- **`account.updatePrefs()`**: Saves custom data (like reputation or theme) directly to the user's account in Appwrite.
+
+### 3. Parallel Execution with `Promise.all`
+
+Inside the `login` function, we do this:
+```ts
+const [user, { jwt }] = await Promise.all([
+    account.get<UserPrefs>(),
+    account.createJWT()
+])
+```
+**Why?** Because waiting for the user profile and THEN waiting for the JWT is slow. `Promise.all` fires both requests at the same time, making the login feel much faster.
+
+### 4. The Hydration Flow in `Auth.ts`
+
+Since we use the `persist` middleware, our auth state is saved in `localStorage`. 
+
+1. **App Starts**: `hydrated` is `false`. The UI might show a "Checking session..." spinner.
+2. **Zustand Reads Storage**: The `persist` middleware reads `localStorage`.
+3. **`onRehydrateStorage` Triggered**:
+   ```ts
+   onRehydrateStorage() {
+       return (state, error) => {
+           if (!error) state?.setHydrated(true)
+       }
+   }
+   ```
+4. **Hydrated!**: `setHydrated(true)` is called, the UI knows the data is ready, and we can safely redirect the user or show their profile.
+
+### 5. Error Handling
+We wrap everything in `try...catch` blocks.
+- If a login fails, Appwrite throws an `AppwriteException`. 
+- We catch it and return it so the UI can show a clear error message (like "Invalid password").
+
+---
 
