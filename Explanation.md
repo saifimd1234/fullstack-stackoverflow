@@ -791,3 +791,49 @@ For these folders to work as routes, the `(Auth)` folder **must be inside the `a
 
 ---
 
+## 🛠️ Breaking Down `app/(Auth)/layout.tsx`
+
+This layout acts as a **Guest Guard**. It ensures that if a user is already logged in, they cannot see the Login or Register pages.
+
+### 1. The Component Signature
+
+```tsx
+const Layout = ({ children }: { children: React.ReactNode }) => { ... }
+```
+
+- **`({ children })`**: This is called **destructuring**. Instead of writing `props.children`, we grab `children` directly from the props object.
+- **`: { children: React.ReactNode }`**: This is a TypeScript type definition. 
+  - It tells the code: "This component MUST receive a prop called `children`."
+  - **`React.ReactNode`** is a built-in type that covers anything React can render (HTML tags, text, other components, etc.).
+
+### 2. The `useEffect` Dependency Array
+
+```tsx
+React.useEffect(() => {
+    if (session) {
+        router.push("/")
+    }
+}, [session, router])
+```
+
+The `[session, router]` part is the **Dependency Array**. Here is why it is there:
+
+- **What it does**: React watches these variables. If either `session` or `router` changes, the code inside `useEffect` runs again.
+- **The Logic**: 
+  - When the app first loads, it checks `session`.
+  - If the user logs in (or the store "hydrates" and finds a saved session), the `session` variable changes from `null` to an `object`.
+  - React notices this change, triggers the `useEffect`, and runs `router.push("/")` to send the logged-in user away from the auth pages.
+- **Why include `router`?**: Technically, `router` (from `useRouter`) doesn't change after the first render, but ESLint rules usually require you to include all external variables used inside the effect to prevent bugs.
+
+### 3. Preventing "Flicker"
+
+```tsx
+if (session) {
+    return null
+}
+```
+
+This simple check prevents a "flicker" where a logged-in user might see the login form for half a second before the redirect happens. If they are logged in, we render **nothing** (`null`) while the router is busy moving them to the home page.
+
+---
+
