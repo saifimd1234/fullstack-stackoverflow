@@ -1,4 +1,4 @@
-import { Permission } from "node-appwrite";
+import { IndexType, Permission } from "node-appwrite";
 import { db, questionCollection } from "../name";
 import { tablesDb } from "./config";
 
@@ -62,4 +62,28 @@ export default async function createQuestionCollection() {
         }),
     ]);
     console.log("Question Attributes created")
+
+    //create indexes
+    //this does not work currently with appwrite, create the index manually
+    try {
+        await tablesDb.createIndex({
+            databaseId: db,
+            tableId: questionCollection,
+            key: "title_index",
+            type: IndexType.Fulltext,
+            columns: ["title"],
+        });
+
+        await tablesDb.createIndex({
+            databaseId: db,
+            tableId: questionCollection,
+            key: "content_index",
+            type: IndexType.Fulltext,
+            columns: ["content"],
+        });
+
+        console.log("Question indexes created");
+    } catch (error) {
+        console.log("Question indexes already exists");
+    }
 }
