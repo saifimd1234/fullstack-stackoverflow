@@ -761,3 +761,33 @@ We wrap everything in `try...catch` blocks.
 
 ---
 
+## 📁 The `(Auth)` Folder: Route Groups & Shared Layouts
+
+In the Next.js App Router, you might see folders named with parentheses, like `(Auth)`. This is a powerful organization feature.
+
+### 1. What are Route Groups? `(folderName)`
+
+Normally, every folder in the `app` directory becomes part of the URL path (e.g., `app/dashboard/settings` → `/dashboard/settings`).
+
+Adding **parentheses** tells Next.js:
+> "Use this folder for organization, but **keep it out of the URL**."
+
+- **Structure**: `app/(Auth)/login/page.tsx`
+- **URL**: `/login` (not `/(Auth)/login`)
+
+**Why use them?**
+- To group related routes (like `login`, `register`, `forgot-password`) together in one place.
+- To prevent long, messy folder lists in your `app` directory.
+
+### 2. Why is `layout.tsx` inside `(Auth)`?
+
+A `layout.tsx` file inside a Route Group becomes a **Shared Layout** just for the routes in that group.
+
+- All pages inside `(Auth)` (like Login and Register) will automatically wrap themselves inside this layout.
+- The root `app/layout.tsx` still applies to everything, but the `(Auth)/layout.tsx` allows you to add specific styles (e.g., centered forms, glassmorphism backgrounds) that **only** appear on auth pages.
+
+### ⚠️ Important Note on Placement
+For these folders to work as routes, the `(Auth)` folder **must be inside the `app` directory**. If it is in the root of your project, Next.js will ignore it and your login/register pages will not be reachable via the browser.
+
+---
+
