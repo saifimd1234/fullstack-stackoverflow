@@ -80,7 +80,7 @@ export const useAuthStore = create<IAuthStore>()(
                 }
             },
 
-            async createAccount(name: string, email: string, password: string) {
+            async createAccount(email: string, password: string, name: string) {
                 try {
                     await account.create(ID.unique(), email, password, name)
                     return { success: true }

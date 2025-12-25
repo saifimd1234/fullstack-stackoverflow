@@ -33,9 +33,9 @@ function RegisterPage() {
         setError(() => "");
 
         const response = await createAccount(
-            name as string,
             email?.toString() ?? "",
-            password?.toString() ?? ""
+            password?.toString() ?? "",
+            name
         );
 
         if (response.error) {
