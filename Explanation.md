@@ -1286,3 +1286,57 @@ or
 
 ---
 
+# 🔟 Refactoring Background Effects (Layout vs Page)
+
+### The Problem
+When backgrounds (like `BubbleBackground` or `BackgroundBeams`) are placed inside a `page.tsx`, they only cover the content area of that specific page. If the page content is small, the background might look "cut off" or centered.
+
+### The Solution: Auth Layout
+By moving the backgrounds to `(Auth)/layout.tsx`, we ensure:
+1. **Full Coverage**: The background occupies the entire viewport (`min-h-screen`).
+2. **Consistency**: Both Login and Register pages share the same stunning background automatically.
+3. **Clean Code**: Individual pages focus only on their forms and logic.
+
+### 🧪 Implementation Strategy
+```tsx
+// (Auth)/layout.tsx
+<BubbleBackground interactive={true} className="min-h-screen">
+    <BackgroundBeams />
+    <div className="relative z-10 w-full">{children}</div>
+</BubbleBackground>
+```
+*   **`min-h-screen`**: Crucial to ensure the background covers the entire viewport, especially when the page content is short.
+*   **`z-10` on children**: Ensures the form stays on top of the interactive background.
+*   **`relative`**: Required for z-index to work correctly.
+
+---
+
+# 1️⃣1️⃣ Layering Multiple Background Effects
+
+### How it works
+You can stack multiple "premium" background effects by following the **Stacking Context** rules in CSS. Imagine them as layers of glass:
+
+1.  **Base Layer (Parent)**: The component that provides the main structure (e.g., `BubbleBackground`).
+2.  **Decorative Layer (Overlay)**: Components like `BackgroundBeams` that add thin visual details. They often use `absolute` positioning.
+3.  **Content Layer (Front)**: Your actual UI (forms, text, buttons) must stay on top of everything.
+
+### 🧪 Implementation Details
+To stack them safely, follow this pattern:
+
+```tsx
+<ParentEffect className="relative min-h-screen"> 
+    {/* 1. Deepest decorative layer */}
+    <OverlayEffect /> 
+
+    {/* 2. Content layer - must have relative + z-index */}
+    <div className="relative z-10 w-full">
+        {children}
+    </div>
+</ParentEffect>
+```
+
+### 🧠 Why `z-10` is necessary?
+Components like `BackgroundBeams` or `BubbleBackground` often use complex SVG paths or canvas elements that have their own positioning. Without a manual `z-index` and `relative` position, your buttons might become **unclickable** because a "beam" or "bubble" is technically sitting invisible on top of them.
+
+---
+

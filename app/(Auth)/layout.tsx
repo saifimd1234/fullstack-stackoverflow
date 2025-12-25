@@ -1,6 +1,7 @@
 "use client";
 
 import { BackgroundBeams } from "@/components/ui/shadcn-io/background-beams";
+import { BubbleBackground } from "@/components/ui/shadcn-io/bubble-background";
 import { useAuthStore } from "@/store/Auth"
 import { useRouter } from "next/navigation";
 import React from "react";
@@ -21,10 +22,10 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     }
 
     return (
-        <div className="relative flex min-h-screen flex-col items-center justify-center py-12">
+        <BubbleBackground interactive={true} className="flex min-h-screen items-center justify-center">
             <BackgroundBeams />
-            <div className="relative">{children}</div>
-        </div>
+            <div className="relative z-10 w-full">{children}</div>
+        </BubbleBackground>
     )
 }
 
