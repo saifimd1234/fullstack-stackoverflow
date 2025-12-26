@@ -1424,3 +1424,82 @@ return NextResponse.json(
 
 ---
 
+## 🗳️ How the Voting System Works (`api/vote/route.ts`)
+
+The Voting API is one of the most complex parts of the application because it doesn't just record a "yes" or "no"; it manages **document state**, **user reputation**, and **toggle logic** (adding, removing, or changing a vote).
+
+### 1. The Core Objective
+When a user clicks a vote button (up or down) on a question or answer:
+- If they haven't voted, a new vote is created.
+- If they click the **same** button again, their vote is "withdrawn" (deleted).
+- If they click the **opposite** button, their old vote is deleted and a new one is created.
+- The **Author's Reputation** is updated automatically based on these actions.
+
+---
+
+### 2. Code Breakdown: Step-by-Step
+
+#### A. Input Extraction
+```ts
+const { votedById, voteStatus, type, typeId } = await request.json();
+```
+- `votedById`: The ID of the user who is casting the vote.
+- `voteStatus`: Either `"upvoted"` or `"downvoted"`.
+- `type`: Whether the vote is for a `"question"` or an `"answer"`.
+- `typeId`: The specific ID of that question or answer.
+
+#### B. Checking for Existing Votes
+```ts
+const response = await databases.listDocuments(db, voteCollection, [
+    Query.equal("type", type),
+    Query.equal("typeId", typeId),
+    Query.equal("votedById", votedById),
+]);
+```
+The code first searches the `voteCollection` to see if this user has *already* voted on this specific item. This prevents a user from voting multiple times on the same thing.
+
+#### C. The "Clean Slate" Logic (Deletion)
+If a vote already exists (`response.documents.length > 0`):
+1. **Delete the old vote**: `databases.deleteDocument(...)`.
+2. **Reverse the Reputation**: 
+   - If the old vote was an **upvote**, the author's reputation is decreased by 1.
+   - If the old vote was a **downvote**, the author's reputation is increased by 1 (reversing the penalty).
+
+#### D. The "Toggle/New Vote" Logic (Creation)
+If the new `voteStatus` is different from the old one (or if no vote existed):
+1. **Create a new vote document**: Stores the `type`, `typeId`, and `voteStatus`.
+2. **Update Reputation again**:
+   - If it's a **new upvote**, author gets +1.
+   - If it's a **new downvote**, author gets -1.
+   - If it was a **toggle** (e.g., up to down), the reputation is adjusted a second time to reflect the new state.
+
+#### E. Calculating the Final Score
+```ts
+const [upvotes, downvotes] = await Promise.all([ ... ]);
+```
+The API performs two parallel queries to count the total upvotes and downvotes for that item. This ensures the frontend gets the most accurate "net score" (`upvotes.total - downvotes.total`) immediately after the action.
+
+---
+
+### 3. Understanding Database & User Connections
+
+#### 📂 How it finds the Database
+The `db`, `voteCollection`, `questionCollection`, and `answerCollection` variables are strings imported from `@/models/name`. These correspond to the IDs set up during the project initialization (Middleware/Setup).
+
+#### 👤 How it finds the Author (`UserPrefs`)
+The reputation isn't stored on the Question itself; it's stored in the **Author's Account Preferences**.
+1. The code gets the Question/Answer document to find the `authorId`.
+2. It uses `users.getPrefs<UserPrefs>(authorId)` to fetch that user's specific settings.
+3. It uses `users.updatePrefs<UserPrefs>(...)` to save the new reputation score.
+   - **`UserPrefs`** is a TypeScript interface defined in `@/store/Auth` that ensures we have a `reputation` field available.
+
+#### 🔗 The "Complete Flow" Summary
+1. User clicks Upvote -> 2. API checks for old vote -> 3. Old vote deleted (if any) -> 4. Reputation reversed (if any) -> 5. New vote created (if status changed) -> 6. Reputation applied for new vote -> 7. Total score recalculated -> 8. Success response sent to UI.
+
+---
+
+### 💡 Why `Promise.all` is used at the end?
+Counting upvotes and downvotes are two separate database requests. By using `Promise.all`, the server fires both requests at the same time instead of waiting for one to finish before starting the other. This makes the voting experience feel "snappy" and fast.
+
+---
+
